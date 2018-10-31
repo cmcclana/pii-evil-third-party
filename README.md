@@ -2,6 +2,10 @@
 
 ## Installation instructions
 
+Make sure you have pipenv and python3 installed:
+
+https://pipenv.readthedocs.io/en/latest/install/
+
 ```
 pipenv install
 pipenv shell

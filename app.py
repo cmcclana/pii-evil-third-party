@@ -1,6 +1,10 @@
+from flask_session import Session
 from flask import Flask, render_template, request, session
 app = Flask(__name__)
 app.secret_key = 'CIS 4851'
+SESSION_TYPE = 'mongodb'
+app.config.from_object(__name__)
+Session(app)
 
 @app.route('/', methods=["POST", "GET"]) 
 def pii():

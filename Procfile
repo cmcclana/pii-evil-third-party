@@ -1,1 +1,1 @@
-web: gunicorn app:evil_third_party
+web: gunicorn evil_third_party:app

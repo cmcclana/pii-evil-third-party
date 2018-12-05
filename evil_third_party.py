@@ -170,3 +170,11 @@ def fingerprints():
     fingerprint_tuples.append(fingerprint_tuple)
     
     return response
+
+@app.route('/reset')
+def reset():
+    fingerprint_tuples.clear()
+    url_tuples.clear()
+    return 'success'
+
+

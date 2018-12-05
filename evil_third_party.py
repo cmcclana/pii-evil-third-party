@@ -1,8 +1,16 @@
 from flask import Flask, Markup, make_response, request
+from flask_sqlalchemy import SQLAlchemy
 from urllib.parse import parse_qs
 import uuid
 import datetime
 app = Flask(__name__)
+from flask_heroku import Heroku
+
+app = Flask(__name__)
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.secret_key = 'CIS 4851'
+heroku = Heroku(app)
+db = SQLAlchemy(app)
 
 fingerprinter_file = open('./fingerprinter.js')
 fingerprinter = fingerprinter_file.read()

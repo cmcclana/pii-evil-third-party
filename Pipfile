@@ -7,6 +7,17 @@ name = "pypi"
 flask = "*"
 flask-session = "*"
 pymongo = "*"
+flask-heroku = "*"
+future = "*"
+gunicorn = "*"
+itsdangerous = "*"
+"psycopg2-binary" = "*"
+selenium = "*"
+Flask-SQLAlchemy = "*"
+"Jinja2" = "*"
+MarkupSafe = "*"
+SQLAlchemy = "*"
+Werkzeug = "*"
 
 [dev-packages]
 

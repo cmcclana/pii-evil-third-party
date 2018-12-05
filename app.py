@@ -1,5 +1,7 @@
 from flask_session import Session
 from flask import Flask, render_template, request, session
+from flask_heroku import Heroku
+
 app = Flask(__name__)
 app.secret_key = 'CIS 4851'
 SESSION_TYPE = 'mongodb'

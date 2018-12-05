@@ -1,29 +1,42 @@
 from flask import Flask, Markup, make_response, request
+from urllib.parse import parse_qs
 import uuid
 import datetime
 app = Flask(__name__)
 
-fingerprinter = open('./fingerprinter.js')
+fingerprinter_file = open('./fingerprinter.js')
+fingerprinter = fingerprinter_file.read()
+fingerprinter_file.close()
+
+fingerprint2_file = open('./libs/fingerprint2.min.js')
+fingerprint2 = fingerprint2_file.read()
+fingerprint2_file.close()
+
+object_hash_file = open('./libs/object_hash.min.js')
+object_hash = object_hash_file.read()
+object_hash_file.close()
+
+# in-memory "database"
+url_tuples = []         # cookie_id url timestamp
+fingerprint_tuples = [] # cookie_id fingerprint_hash timestamp
 
 def create_advertisement(title):
-    normal_ad = Markup(f'''
+    return Markup(f'''
         <html>
             <title>
                 Non-Evil Advertisement
             </title>
             <body>
                 <h1>{title}</h1>
-                <script>
-                    console.log('TODO: add fingerprinting javascript code');
-                    fetch('/fingerprints', {})
-                </script>
+                <script>{fingerprint2}</script>
+                <script>{object_hash}</script>
+                <script>{fingerprinter}</script>
             </body>
         </html>
     ''')
-    
 
 
-# <iframe src="https://evilthirdparty.com"></iframe>
+hacker_group_name = 'hackers_group'
 
 @app.route('/')
 def evil_third_party():
@@ -59,26 +72,101 @@ def evil_third_party():
         response.set_cookie('cookie_id',  cookie_id)
 
     # grab URL from referer header
-    url = request.headers.get('referer')
-    # user_agent = request.headers.get('user-agent')
-    # ip_address = request.remote_addr
+    url = request.headers.get('referer') or ''
     timestamp = datetime.datetime.now()
 
+    if hacker_group_name in url:
+        # want this to work in private mode so can't assume cookie
+
+        # normal mode
+        # 1. W goes to form site and submits name  |  we get cookie + url
+        # 2. W's computer performs a fingerprint and uploads it with the previous cookie ID | cookie + fingerprint
+        
+        # private mode (first load)
+        # 1. W goes to tip site, first call loads the third party and the same process as above happens but with a different cookie
+        # 2. W's computer performs the fingerprint and resolves to the same fingerprint as before and also uploads it (private session cookie + fingerprint)
+        
+        # private mode (submission)
+        # 1. W submits the tip with the hacker group name (which causes that branch to run)
+        # 2. we have just cookie + URL
+
+        #url_tuples = []         # cookie_id url timestamp
+        #fingerprint_tuples = [] # cookie_id fingerprint_hash timestamp
+
+        # grab the fingerprints that match the current cookie_id
+        linked_fingerprint_tuples = filter(
+            lambda fingerprint_tuple: fingerprint_tuple[0] == cookie_id,
+            fingerprint_tuples
+        )
+        linked_fingerprints = list(map(
+            lambda fingerprint_tuple: fingerprint_tuple[1],
+            linked_fingerprint_tuples
+        ))
+
+        # grab the cookies that are linked to the fingerprints found above
+        linked_cookie_tuples = filter(
+            lambda fingerprint_tuple: fingerprint_tuple[1] in linked_fingerprints,
+            fingerprint_tuples
+        )
+        linked_cookies = list(map(
+            lambda fingerprint_tuple: fingerprint_tuple[0],
+            linked_cookie_tuples
+        ))
+
+        # grab the urls that are linked to the cookies
+        linked_url_tuples = filter(lambda url_tuple: url_tuple[0] in linked_cookies, url_tuples)
+        linked_urls = list(map(lambda url_tuple: url_tuple[1], linked_url_tuples))
+
+        def parse_url(url):
+            split = url.split('?')
+            if len(split) <= 1:
+                return {}
+            query_string = split[1]
+            return parse_qs(query_string)
+        parsed_urls = list(map(parse_url, linked_urls))
+
+        combined_dict = {}
+
+        for parsed_url in parsed_urls:
+            for key, values in parsed_url.items():
+                if key in combined_dict:
+                    for value in values:
+                        combined_dict[key].append(value)
+                else:
+                    combined_dict[key] = values
+
+        first_names = combined_dict.get('first-name', [''])
+        last_names = combined_dict.get('last-name', [''])
+        
+        first_name = first_names[0]
+        last_name = last_names[0]
+
+        response = make_response(create_advertisement(f'Gotcha, {first_name} {last_name}'))
+        return response
+        
     # this tuple will be used to track the user on the first-party site
     # and grab PII leaked from the URL
-    tracking_tuple = (cookie_id, url, timestamp)
-    print(tracking_tuple)
-
-    # TODO: save tuple to DB or in-memory
+    url_tuple = (cookie_id, url, timestamp)
+    url_tuples.append(url_tuple)
 
     return response
 
-@app.route('/fingerprints', method='POST')
+@app.route('/fingerprints', methods=['POST'])
 def fingerprints():
-    request_data = request.get_json()
-    print(request_data)
+    fingerprint = str(request.get_data())
 
+    response = make_response()
+    response.headers.set('Content-Type', 'text/html')
 
-@app.route('/history')
-def history():
-    return 'TODO'
+    # ensure a cookie_id
+    cookie_id = request.cookies.get('cookie_id')
+    if not cookie_id:
+        cookie_id = uuid.uuid4().hex
+        response.set_cookie('cookie_id',  cookie_id)
+
+    timestamp = datetime.datetime.now()
+
+    fingerprint_tuple = (cookie_id, fingerprint, timestamp)
+    fingerprint_tuples.append(fingerprint_tuple)
+    
+    return response
